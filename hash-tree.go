@@ -1,7 +1,6 @@
 package hash_tree
 
 import "hash"
-import "github.com/cxmcc/tiger"
 
 type Tree struct {
 	hasher      hash.Hash
@@ -18,15 +17,11 @@ type Tree struct {
 	block_index uint
 }
 
-func New() *Tree {
-	return NewTree(tiger.New())
+func New(hasher hash.Hash) *Tree {
+	return NewCustom(hasher, 1024, []byte{0x00}, []byte{0x01}, true)
 }
 
-func NewTree(hasher hash.Hash) *Tree {
-	return NewCustomTree(hasher, 1024, []byte{0x00}, []byte{0x01}, true)
-}
-
-func NewCustomTree(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte, skip_empty bool) *Tree {
+func NewCustom(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte, skip_empty bool) *Tree {
 	t := new(Tree)
 	t.hasher = hasher
 	t.block_size = block_size
