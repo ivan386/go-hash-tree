@@ -86,7 +86,7 @@ func (t *Tree) Sum(in []byte) []byte {
 	if t.block_len > 0 {
 		t.AppendHash(t.hasher.Sum(nil))
 	}
-	
+
 	if t.block_index == 0 {
 		if t.block_len == 0 {
 			t.hasher.Reset()
@@ -105,15 +105,26 @@ func (t *Tree) Sum(in []byte) []byte {
 			t.index += 1
 		}
 	}
-	
+
 	return append(in, t.last_hash...)
+}
+
+func (t *Tree) AppendHashList(hashes []byte) {
+	hash_size := t.Size()
+	for len(hashes) >= hash_size {
+		t.AppendHash(hashes[:hash_size])
+		hashes = hashes[hash_size:]
+	}
 }
 
 func (t *Tree) AppendHash(hashes ...[]byte) {
 	for _, hash_value := range hashes {
+		if len(hash_value) != t.Size() {
+			panic("wrong hash size")
+		}
 		t.state = t.block_index
 		t.index = 0
-		
+
 		for t.state&1 == 1 {
 			hash_value = t.pairHash(t.levels[t.index], hash_value)
 			t.state >>= 1
