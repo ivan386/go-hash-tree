@@ -17,11 +17,11 @@ type Tree struct {
 	block_index uint
 }
 
-func New(hasher hash.Hash) *Tree {
-	return NewCustom(hasher, 1024, []byte{0x00}, []byte{0x01}, true)
+func NewDefault(hasher hash.Hash) *Tree {
+	return New(hasher, 1024, []byte{0x00}, []byte{0x01}, true)
 }
 
-func NewCustom(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte, skip_empty bool) *Tree {
+func New(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte, skip_empty bool) *Tree {
 	tree := new(Tree)
 	tree.hasher = hasher
 	tree.block_size = block_size
