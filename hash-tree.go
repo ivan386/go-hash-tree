@@ -85,6 +85,7 @@ func (tree *Tree) Write(data []byte) (int, error) {
 func (tree *Tree) Sum(in []byte) []byte {
 	if tree.block_len > 0 {
 		tree.AppendHash(tree.hasher.Sum(nil))
+		tree.block_len = 0
 	}
 
 	if tree.block_index == 0 {
@@ -119,14 +120,12 @@ func (tree *Tree) AppendHashList(hashes []byte) {
 
 func (tree *Tree) AppendHash(hashes ...[]byte) {
 	for _, hash_value := range hashes {
-		if len(hash_value) != tree.Size() {
-			panic("wrong hash size")
-		}
 		tree.state = tree.block_index
 		tree.index = 0
 
 		for tree.state&1 == 1 {
 			hash_value = tree.pairHash(tree.levels[tree.index], hash_value)
+			tree.levels[tree.index] = nil
 			tree.state >>= 1
 			tree.index += 1
 		}
