@@ -7,7 +7,6 @@ type Tree struct {
 	block_size  int
 	data_prefix []byte
 	pair_prefix []byte
-	skip_empty  bool
 
 	block_len   int
 	levels      [][]byte
@@ -18,16 +17,15 @@ type Tree struct {
 }
 
 func NewDefault(hasher hash.Hash) *Tree {
-	return New(hasher, 1024, []byte{0x00}, []byte{0x01}, true)
+	return New(hasher, 1024, []byte{0x00}, []byte{0x01})
 }
 
-func New(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte, skip_empty bool) *Tree {
+func New(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte) *Tree {
 	tree := new(Tree)
 	tree.hasher = hasher
 	tree.block_size = block_size
 	tree.data_prefix = data_prefix
 	tree.pair_prefix = pair_prefix
-	tree.skip_empty = skip_empty
 	return tree
 }
 
@@ -99,8 +97,7 @@ func (tree *Tree) Sum(in []byte) []byte {
 		for tree.state > 0 {
 			if tree.state&1 == 1 {
 				tree.last_hash = tree.pairHash(tree.levels[tree.index], tree.last_hash)
-			} else if !tree.skip_empty {
-				tree.last_hash = tree.pairHash(tree.last_hash, tree.last_hash)
+				tree.levels[tree.index] = nil
 			}
 			tree.state >>= 1
 			tree.index += 1
