@@ -1,19 +1,16 @@
 package hash_tree
 
 import "hash"
+import tree_pairs "github.com/ivan386/go-hash-tree/pairs"
 
 type Tree struct {
 	hasher      hash.Hash
+	pairs       hash.Hash
 	block_size  int
 	data_prefix []byte
-	pair_prefix []byte
 
-	block_len   int
-	levels      [][]byte
-	index       uint
-	state       uint
-	last_hash   []byte
-	block_index uint
+	block_len int
+	last_hash []byte
 }
 
 func NewDefault(hasher hash.Hash) *Tree {
@@ -23,9 +20,10 @@ func NewDefault(hasher hash.Hash) *Tree {
 func New(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte) *Tree {
 	tree := new(Tree)
 	tree.hasher = hasher
+	tree.pairs = tree_pairs.New(hasher, pair_prefix)
+
 	tree.block_size = block_size
 	tree.data_prefix = data_prefix
-	tree.pair_prefix = pair_prefix
 	return tree
 }
 
@@ -39,12 +37,9 @@ func (tree *Tree) Size() int {
 
 func (tree *Tree) Reset() {
 	tree.hasher.Reset()
+	tree.pairs.Reset()
 	tree.block_len = 0
-	tree.levels = nil
-	tree.index = 0
-	tree.state = 0
 	tree.last_hash = nil
-	tree.block_index = 0
 }
 
 func (tree *Tree) Write(data []byte) (int, error) {
@@ -54,7 +49,7 @@ func (tree *Tree) Write(data []byte) (int, error) {
 		part := tree.block_size - tree.block_len
 		if part <= len(data) {
 			tree.hasher.Write(data[:part])
-			tree.AppendHash(tree.hasher.Sum(nil))
+			tree.pairs.Write(tree.hasher.Sum(nil))
 			tree.block_len = 0
 			data = data[part:]
 		}
@@ -64,7 +59,7 @@ func (tree *Tree) Write(data []byte) (int, error) {
 		tree.hasher.Reset()
 		tree.hasher.Write(tree.data_prefix)
 		tree.hasher.Write(data[:tree.block_size])
-		tree.AppendHash(tree.hasher.Sum(nil))
+		tree.pairs.Write(tree.hasher.Sum(nil))
 		data = data[tree.block_size:]
 	}
 
@@ -82,66 +77,18 @@ func (tree *Tree) Write(data []byte) (int, error) {
 
 func (tree *Tree) Sum(in []byte) []byte {
 	if tree.block_len > 0 {
-		tree.AppendHash(tree.hasher.Sum(nil))
+		tree.pairs.Write(tree.hasher.Sum(nil))
 		tree.block_len = 0
-	}
-
-	if tree.block_index == 0 {
-		if tree.block_len == 0 {
+	} 
+	
+	if len(tree.last_hash) == 0 {
+		tree.last_hash = tree.pairs.Sum(nil)
+		if len(tree.last_hash) == 0 {
 			tree.hasher.Reset()
 			tree.hasher.Write(tree.data_prefix)
-		}
-		tree.last_hash = tree.hasher.Sum(nil)
-		tree.block_index = 1
-	} else {
-		for tree.state > 0 {
-			if tree.state&1 == 1 {
-				tree.last_hash = tree.pairHash(tree.levels[tree.index], tree.last_hash)
-				tree.levels[tree.index] = nil
-			}
-			tree.state >>= 1
-			tree.index += 1
+			tree.last_hash = tree.hasher.Sum(nil)
 		}
 	}
 
 	return append(in, tree.last_hash...)
-}
-
-func (tree *Tree) AppendHashList(hashes []byte) {
-	hash_size := tree.Size()
-	for len(hashes) >= hash_size {
-		tree.AppendHash(hashes[:hash_size])
-		hashes = hashes[hash_size:]
-	}
-}
-
-func (tree *Tree) AppendHash(hashes ...[]byte) {
-	for _, hash_value := range hashes {
-		tree.state = tree.block_index
-		tree.index = 0
-
-		for tree.state&1 == 1 {
-			hash_value = tree.pairHash(tree.levels[tree.index], hash_value)
-			tree.levels[tree.index] = nil
-			tree.state >>= 1
-			tree.index += 1
-		}
-
-		if len(tree.levels) == int(tree.index) {
-			tree.levels = append(tree.levels, hash_value)
-		} else {
-			tree.levels[tree.index] = hash_value
-		}
-
-		tree.last_hash = hash_value
-		tree.block_index += 1
-	}
-}
-
-func (tree *Tree) pairHash(left []byte, right []byte) []byte {
-	tree.hasher.Reset()
-	tree.hasher.Write(tree.pair_prefix)
-	tree.hasher.Write(left)
-	tree.hasher.Write(right)
-	return tree.hasher.Sum(nil)
 }
