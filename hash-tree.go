@@ -1,7 +1,7 @@
 package hash_tree
 
 import "hash"
-import tree_pairs "github.com/ivan386/go-hash-tree/pairs"
+import tree_pairs "github.com/ivan386/go-hash-tree/tree-pairs"
 
 type Tree struct {
 	hasher      hash.Hash
@@ -20,7 +20,7 @@ func NewDefault(hasher hash.Hash) *Tree {
 func New(hasher hash.Hash, block_size int, data_prefix []byte, pair_prefix []byte) *Tree {
 	tree := new(Tree)
 	tree.hasher = hasher
-	tree.pairs = tree_pairs.New(hasher, pair_prefix)
+	tree.pairs = tree_pairs.New(hasher, pair_prefix, hasher.Size())
 
 	tree.block_size = block_size
 	tree.data_prefix = data_prefix
@@ -79,8 +79,8 @@ func (tree *Tree) Sum(in []byte) []byte {
 	if tree.block_len > 0 {
 		tree.pairs.Write(tree.hasher.Sum(nil))
 		tree.block_len = 0
-	} 
-	
+	}
+
 	if len(tree.last_hash) == 0 {
 		tree.last_hash = tree.pairs.Sum(nil)
 		if len(tree.last_hash) == 0 {

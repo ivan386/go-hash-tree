@@ -5,6 +5,7 @@ import "hash"
 type TreePairs struct {
 	hasher      hash.Hash
 	pair_prefix []byte
+	hash_size   int
 
 	levels     [][]byte
 	index      uint
@@ -13,10 +14,16 @@ type TreePairs struct {
 	hash_count uint
 }
 
-func New(hasher hash.Hash, pair_prefix []byte) *TreePairs {
+func New(hasher hash.Hash, pair_prefix []byte, hash_size int) *TreePairs {
+	if hash_size < 1 {
+		panic("hash_size must be > 0")
+		return nil
+	}
+
 	tree := new(TreePairs)
 	tree.hasher = hasher
 	tree.pair_prefix = pair_prefix
+	tree.hash_size = hash_size
 	return tree
 }
 
@@ -53,11 +60,10 @@ func (tree *TreePairs) Sum(in []byte) []byte {
 
 func (tree *TreePairs) Write(hashes []byte) (int, error) {
 	writen := len(hashes)
-	hash_size := tree.BlockSize()
 
-	for len(hashes) >= hash_size {
-		tree.AppendHash(hashes[:hash_size])
-		hashes = hashes[hash_size:]
+	for len(hashes) >= tree.hash_size {
+		tree.AppendHash(hashes[:tree.hash_size])
+		hashes = hashes[tree.hash_size:]
 	}
 
 	return writen, nil
